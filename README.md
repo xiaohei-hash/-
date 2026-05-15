@@ -1,215 +1,132 @@
-# -基于神经网络的图像分类实验
-项目简介
-本项目实现了一个完整的基于卷积神经网络（CNN）的图像分类实验系统。通过构建、训练和评估深度学习模型，对手写数字（MNIST）和彩色图像（CIFAR-10）进行自动分类识别。
+Markdown
+复制
+代码
+预览
+# 实验一：基于神经网络的图像分类实验
 
-实验环境
-硬件要求
-CPU：支持AVX指令集（推荐）
+> 基于 TensorFlow 2.x 的 CNN 图像分类完整实验流程，支持 MNIST 与 CIFAR-10 数据集，涵盖环境验证、数据预处理、模型搭建、训练调优、性能评估及可视化分析。
 
-GPU：NVIDIA GPU + CUDA（可选，用于加速训练）
+---
 
-内存：建议8GB以上
+## 📋 环境要求
 
-软件要求
-Python 3.8+
+- **Python**: 3.8+
+- **TensorFlow**: 2.10+
+- **依赖库**: `numpy`, `matplotlib`, `seaborn`, `scikit-learn`
 
-TensorFlow 2.10+
-
-NumPy
-
-Matplotlib
-
-Scikit-learn
-
-Seaborn
-
-安装依赖
+```bash
+pip install tensorflow numpy matplotlib seaborn scikit-learn
+📁 代码文件说明
+cnn_classification.py：主程序文件，包含以下核心模块。
+🏗️ 代码结构与核心功能
+1. 环境验证 (check_environment 函数)
+功能：检测当前运行环境，确认 TensorFlow 版本、NumPy 版本及 GPU 可用性。
+细节：
+自动列出可用的物理 GPU 设备
+若无 GPU，则提示使用 CPU 训练
+设置全局随机种子（seed=42）保证实验可复现
+2. 数据集处理与加载 (load_and_preprocess_data 函数)
+功能：加载并预处理指定数据集，自动划分训练集、验证集与测试集。
+支持数据集：
+mnist：28×28 灰度手写数字图像，10 分类
+cifar10：32×32 彩色自然图像，10 分类
+预处理流程：
+像素值归一化至 [0, 1]
+MNIST 维度扩展：(28, 28) → (28, 28, 1)
+CIFAR-10 标签展平
+从训练集划分 10% 作为验证集
+返回结果：分别得到 x_train、y_train（训练集）、x_val、y_val（验证集）和 x_test、y_test（测试集）。
+3. CNN 模型搭建 (create_cnn_model 函数)
+功能：构建一个适用于图像分类的卷积神经网络（CNN）。
+网络结构：
+表格
+层类型	配置	输出
+Conv2D	32 个 3×3 卷积核, ReLU, Same Padding	特征图
+BatchNormalization	—	标准化特征
+MaxPooling2D	2×2 池化	下采样
+Conv2D	64 个 3×3 卷积核, ReLU, Same Padding	特征图
+BatchNormalization	—	标准化特征
+MaxPooling2D	2×2 池化	下采样
+Conv2D	64 个 3×3 卷积核, ReLU, Same Padding	特征图
+BatchNormalization	—	标准化特征
+Flatten	—	一维向量
+Dense	128 神经元, ReLU	全连接层
+Dropout	可选，默认率 0.5	防止过拟合
+Dense	num_classes 神经元, Softmax	分类输出
+输入通道数：MNIST 为 1（灰度），CIFAR-10 为 3（RGB）
+输出层：10 分类 Softmax
+4. 模型编译 (compile_model 函数)
+损失函数：sparse_categorical_crossentropy
+优化器：Adam（默认学习率 0.001）
+评估指标：accuracy
+5. 训练过程与调优 (train_model 函数)
+功能：执行模型训练，并集成多种回调策略。
+回调配置：
+表格
+回调函数	功能描述
+EarlyStopping	监控验证损失，3 轮不下降则早停，并恢复最佳权重
+ReduceLROnPlateau	验证损失 2 轮不下降时，学习率减半（最小至 1e-6）
+ModelCheckpoint	保存验证准确率最高的模型至 best_model.h5
+训练参数：默认 epochs=20，batch_size=64
+6. 训练过程可视化 (plot_training_history 函数)
+功能：绘制并保存训练过程中的准确率与损失曲线。
+输出文件：{dataset}_training_history.png
+7. 性能评估与改进 (evaluate_model 函数)
+功能：在测试集上全面评估模型性能。
+评估内容：
+测试集损失与准确率
+详细分类报告（classification_report）
+混淆矩阵热力图（{dataset}_confusion_matrix.png）
+错误样本可视化（{dataset}_error_samples.png）
+8. 优化对比实验 (compare_optimizations 函数)
+功能：对比不同正则化与优化策略对模型性能的影响。
+实验组：
+表格
+实验名称	配置	说明
+基础模型	无 Dropout	观察过拟合情况
+Dropout 正则化	Dropout(0.5)	防止过拟合
+低学习率	LR = 0.0001	观察收敛速度与精度
+🚀 快速开始
+运行默认实验（MNIST）
 bash
-pip install tensorflow==2.10 numpy matplotlib scikit-learn seaborn
-数据集说明
-MNIST 手写数字数据集
-内容：0-9的手写数字灰度图像
-
-图像尺寸：28×28 像素
-
-训练集：60,000张
-
-测试集：10,000张
-
-颜色通道：1（灰度）
-
-CIFAR-10 彩色图像数据集
-类别：飞机、汽车、鸟、猫、鹿、狗、青蛙、马、船、卡车
-
-图像尺寸：32×32 像素
-
-训练集：50,000张
-
-测试集：10,000张
-
-颜色通道：3（RGB）
-
-模型架构
-卷积神经网络结构
-text
-输入层 (28×28×1 或 32×32×3)
-    ↓
-Conv2D (32个3×3卷积核, ReLU) + BatchNormalization
-    ↓
-MaxPooling2D (2×2)
-    ↓
-Conv2D (64个3×3卷积核, ReLU) + BatchNormalization
-    ↓
-MaxPooling2D (2×2)
-    ↓
-Conv2D (64个3×3卷积核, ReLU) + BatchNormalization
-    ↓
-Flatten
-    ↓
-Dense (128, ReLU)
-    ↓
-Dropout (0.5)
-    ↓
-Dense (10, Softmax)
-模型参数
-优化器：Adam
-
-损失函数：稀疏分类交叉熵
-
-评估指标：准确率
-
-学习率：0.001（可调）
-
-实验流程
-阶段1：环境验证
-检查TensorFlow和NumPy版本
-
-检测GPU可用性
-
-阶段2：数据加载与预处理
-数据加载与划分（训练/验证/测试）
-
-像素值归一化 [0,1]
-
-维度调整适配CNN输入
-
-阶段3：模型构建与编译
-搭建CNN架构
-
-配置优化器和损失函数
-
-阶段4：模型训练
-批量大小：64
-
-训练轮次：20
-
-回调函数：
-
-早停（EarlyStopping）
-
-学习率衰减（ReduceLROnPlateau）
-
-模型检查点（ModelCheckpoint）
-
-阶段5：性能评估
-测试集准确率评估
-
-混淆矩阵分析
-
-错误样本可视化
-
-分类报告生成
-
-运行方法
-基础运行（使用MNIST数据集）
-bash
-python image_classification.py
-切换至CIFAR-10数据集
-在 main() 函数中修改：
-
-python
-DATASET = 'cifar10'  # 改为'cifar10'
-运行优化对比实验
-取消 main() 函数中最后几行的注释：
-
-python
-compare_optimizations(x_train, y_train, x_val, y_val, x_test, y_test,
-                      input_shape, num_classes, class_names)
-实验结果
-MNIST 预期结果
-测试准确率：>99%
-
-训练时间：约5-10分钟（CPU）
-
-CIFAR-10 预期结果
-测试准确率：约70-75%
-
-训练时间：约15-30分钟（CPU）
-
-输出文件
+复制
+python cnn_classification.py
+切换至 CIFAR-10 数据集
+修改脚本中主函数的 DATASET 变量：
+Python
+复制
+DATASET = 'cifar10'  # 默认为 'mnist'
+调整超参数
+在主函数中直接修改：
+Python
+复制
+EPOCHS = 20
+BATCH_SIZE = 64
+LEARNING_RATE = 0.001
+📤 输出文件说明
+运行完成后，将生成以下文件：
+表格
 文件名	说明
-{dataset}_training_history.png	训练/验证准确率和损失曲线
-{dataset}_confusion_matrix.png	分类结果混淆矩阵
-{dataset}_error_samples.png	分类错误样本可视化
-best_model.h5	验证集最佳模型
-{dataset}_final_model.h5	最终训练完成的模型
-优化实验
-程序支持三种配置对比实验：
-
-无Dropout：基础模型，观察过拟合情况
-
-Dropout(0.5)：添加Dropout正则化
-
-学习率0.0001：较低学习率对收敛的影响
-
-代码结构
-text
-image_classification.py
-├── check_environment()          # 环境检查
-├── load_and_preprocess_data()   # 数据加载与预处理
-├── create_cnn_model()           # 模型构建
-├── compile_model()              # 模型编译
-├── train_model()                # 模型训练
-├── plot_training_history()      # 训练曲线绘制
-├── evaluate_model()             # 模型评估
-├── plot_confusion_matrix()      # 混淆矩阵绘制
-├── visualize_errors()           # 错误样本可视化
-├── compare_optimizations()      # 优化对比实验
-└── main()                       # 主函数
-常见问题
-Q1: 提示缺少模块怎么办？
-A: 使用 pip install 模块名 安装缺失的依赖包。
-
-Q2: 训练速度很慢？
-A:
-
-检查GPU是否可用
-
-减小 BATCH_SIZE
-
-减少 EPOCHS
-
-Q3: 中文显示异常？
-A: 系统缺少中文字体，可以：
-
-安装SimHei字体
-
-或修改 plt.rcParams 中的字体设置
-
-Q4: CIFAR-10准确率低？
-A:
-
-增加训练轮次
-
-调整学习率
-
-尝试更深的网络结构
-
-扩展建议
-数据增强：添加随机旋转、平移、翻转等操作
-
-网络改进：尝试ResNet、VGG等预训练模型
-
-超参数调优：使用Grid Search或Random Search
-
-可视化：添加特征图可视化、注意力机制
+best_model.h5	训练过程中验证准确率最高的模型
+{dataset}_final_model.h5	最终保存的完整模型
+{dataset}_training_history.png	训练/验证准确率与损失曲线
+{dataset}_confusion_matrix.png	测试集混淆矩阵热力图
+{dataset}_error_samples.png	分类错误的样本可视化
+注：{dataset} 根据所选数据集自动替换为 mnist 或 cifar10。
+📂 项目结构建议
+plain
+复制
+.
+├── cnn_classification.py   # 主程序（单文件完整版）
+├── README.md               # 本说明文档
+├── best_model.h5           # 最佳模型（运行后生成）
+├── mnist_final_model.h5    # 最终模型（运行后生成）
+├── mnist_training_history.png
+├── mnist_confusion_matrix.png
+└── mnist_error_samples.png
+📝 实验要点总结
+数据预处理：归一化与维度扩展是 CNN 输入的关键准备步骤。
+BatchNormalization：加速训练收敛，提升模型稳定性。
+Dropout：有效抑制过拟合，建议在深层网络中启用。
+回调策略：早停与学习率衰减可避免无效训练并自动保存最优模型。
+错误分析：通过混淆矩阵与错误样本可视化，直观定位模型薄弱环节。
